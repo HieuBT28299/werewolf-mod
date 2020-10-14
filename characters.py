@@ -3,10 +3,13 @@ from constants import *
 killedLastNight = list()
 
 class Character:
+    id = 0
     name = None
     player = None
     team = TEAM_HUMAN
     power = 0
+    lastContactedCharId = 0
+    disabled = False
     alive = True
     protected = False
 
@@ -25,6 +28,9 @@ class Character:
     def guardProtected(self):
         self.protected = True
 
+    def teamShown(self):
+        return self.team
+
     def resetAfterDay(self):
         self.protected = False
 
@@ -39,48 +45,58 @@ class Character:
         return ''
 
     def info(self):
-        return (self.name + ' ' + self.player + ' ' + self.team + ' ' + self.aliveStatus() + ' ' + self.protectedStatus())
+        return (str(self.id) + ' ' + self.name + ' ' + self.player + ' ' + self.team + ' ' + self.aliveStatus() + ' ' + self.protectedStatus())
 
 class Villager(Character):
-    def __init__(self, player = None):
+    def __init__(self, player = None, id = 0):
+        self.id = id
         self.name = CHAR_VILLAGER
         self.team = TEAM_HUMAN
         self.power = 1
         self.player = player
 
 class Werewolf(Character):
-    def __init__(self, player = None):
+    def __init__(self, player = None, id = 0):
+        self.id = id
         self.name = CHAR_WOLF
         self.team = TEAM_WOLF
         self.power = -3
         self.player = player
 
 class WolfPack(Character):
-    def __init__(self, player = None):
+    def __init__(self, player = None, id = 0, disabled = False):
+        self.id = id
         self.name = MISC_WOLFPACK
         self.team = TEAM_WOLF
+        self.disabled = disabled
     
     def skill(self, char):
-        if (char.protected is False):
+        killable = (not char.protected) and (not self.disabled)
+        if (killable):
             char.killed()
+            print(char.player, 'has been killed by the Wolves')
 
 class Seer(Character):
-    def __init__(self, player = None):
+    def __init__(self, player = None, id = 0):
+        self.id = id
         self.name = CHAR_SEER
         self.team = TEAM_HUMAN
         self.power = 7
         self.player = player
 
     def skill(self, char):
-        print(char.player, 'belongs to', char.team)
+        print(char.player, 'belongs to', char.teamShown())
 
 class Guard(Character):
-    def __init__(self, player = None):
+    def __init__(self, player = None, id = 0):
+        self.id = id
         self.name = CHAR_GUARD
         self.team = TEAM_HUMAN
         self.power = 3
         self.player = player
 
     def skill(self, char):
-        char.guardProtected()
-        print(char.player, 'has been protected')
+        if not self.disabled:
+            char.guardProtected()
+            self.lastContactedCharId = char.id
+            print(char.player, 'has been protected')

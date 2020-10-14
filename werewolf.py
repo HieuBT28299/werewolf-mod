@@ -3,7 +3,6 @@ import random
 
 #generate player list
 players = list()
-alivePlayersTuple = list()
 fhand = open('players.txt')
 for line in fhand:
     pl = line.strip()
@@ -11,12 +10,6 @@ for line in fhand:
 fhand.close()
 random.shuffle(players)
 playersNum = len(players)
-for i in range(playersNum):
-    pltup = (i, players[i])
-    alivePlayersTuple.append(pltup)
-print(alivePlayersTuple)
-
-
 
 #get roles
 roles = list()
@@ -32,14 +25,26 @@ fhand.close()
 characters = list()
 for i in range(playersNum):
     if (roles[i] == CHAR_WOLF):
-        char = Werewolf(player=players[i])
+        char = Werewolf(player=players[i], id=i+1)
     elif (roles[i] == CHAR_VILLAGER):
-        char = Villager(player=players[i])
+        char = Villager(player=players[i], id=i+1)
     elif (roles[i] == CHAR_SEER):
-        char = Seer(player=players[i])
+        char = Seer(player=players[i], id=i+1)
     elif (roles[i] == CHAR_GUARD):
-        char = Guard(player=players[i])
+        char = Guard(player=players[i], id=i+1)
     characters.append(char)
+
+#list of alive players
+alivePlayersTuple = list()
+
+#update list of alive players
+def updateAlivePlayersTuple():
+    alivePlayersTuple.clear()
+    for char in characters:
+        if char.alive:
+            pltup = (char.id, char.player)
+            alivePlayersTuple.append(pltup)
+
 
 def teamStatus():
     s = TEAM_WOLF + ' ' + str(count(TEAM_WOLF))
@@ -59,10 +64,19 @@ def allPlayersStatus():
     for char in characters:
         print(char.info())
 
-def getCharacter(charName):
+def alivePlayersStatus():
+    print(teamStatus())
+    for char in characters:
+        if char.alive:
+            print(char.info())
+
+def getCharacterByRole(charName):
     for char in characters:
         if char.name == charName:
             return char
+
+def getCharacterById(id):
+    return characters[id-1]
 
 def exist(role):
     return role in roles
@@ -79,17 +93,30 @@ def characterTurn(char):
     s += '======='
     return s
 
-def dayTimeStartText():
-    s = 'LAST NIGHT, SOMETHING HAPPENED'
+def nightTimeStartText(days):
+    s = '=============================== \n'
+    s += 'NIGHT {} STARTED. CLOSE YOUR EYES \n'.format(days)
+    s += '==============================='
     return s
 
-def playerKilled(id):
-    charToKill = characters[id]
-    charToKill.killed()
-    for pltup in alivePlayersTuple:
-        if pltup[0] == id:
-            alivePlayersTuple.remove(pltup)
-    print(characters[id].info())
+def dayTimeStartText():
+    s = '=============================== \n'
+    s += 'LAST NIGHT, SOMETHING HAPPENED \n'
+    s += '==============================='
+    return s
+
+def printNightVictims():
+    n = len(killedLastNight)
+    s = '======='
+    print(s, n, 'PEOPLE DEAD:', killedLastNight, s)
+
+# def playerKilled(id):
+#     charToKill = getCharacterById(id)
+#     charToKill.killed()
+#     for pltup in alivePlayersTuple:
+#         if pltup[0] == id:
+#             alivePlayersTuple.remove(pltup)
+#     print(getCharacterById(id).info())
 
 def validateIntInput(inp):
     r = -1
@@ -104,54 +131,65 @@ def resetAfterDay():
     for char in characters:
         char.resetAfterDay()
 
+#Function supported
+def isWolfPackDisabled():
+    for char in characters:
+        if char.team == TEAM_WOLF and char.disabled:
+            return True
+    return False
+
+
 #start the game
 days = 1
 # printAliveCharacters()
-while days == 1:
+while days <= 2:
     ################################ NIGHT TIME ################################
     
+    updateAlivePlayersTuple()
     allPlayersStatus()
     killedLastNight.clear()
+    print(nightTimeStartText(days))
     if (days == 1):
         print('Cupid and others //')
-        playerKilled(5)
+        # playerKilled(5)
     if exist(CHAR_GUARD):
-        guard = getCharacter(CHAR_GUARD)
+        guard = getCharacterByRole(CHAR_GUARD)
         print(characterTurn(CHAR_GUARD))
         printAliveCharacters()
         inp = input('Who do you want to protect? id = ')
         id = validateIntInput(inp)
-        protectedChar = characters[id]
+        protectedChar = getCharacterById(id)
         guard.skill(protectedChar)
-        allPlayersStatus()
-    if exist(CHAR_WOLF):
+        # allPlayersStatus()
+    if count(TEAM_WOLF) > 0:
         print(characterTurn(CHAR_WOLF))
         printAliveCharacters()
-        wolfpack = WolfPack()
+        wolfpack = WolfPack(disabled=isWolfPackDisabled())
         inp = input('Who do you ALL want to kill? id = ')
         id = validateIntInput(inp)
-        killedChar = characters[id]
+        killedChar = getCharacterById(id)
         wolfpack.skill(killedChar)
-        allPlayersStatus()
+        # allPlayersStatus()
     if exist(CHAR_SEER):
-        seer = getCharacter(CHAR_SEER)
+        seer = getCharacterByRole(CHAR_SEER)
         print(characterTurn(CHAR_SEER))
         printAliveCharacters()
         inp = input('Who do you want to see through? id = ')
         id = validateIntInput(inp)
-        seenChar = characters[id]
+        seenChar = getCharacterById(id)
         seer.skill(seenChar)
-        allPlayersStatus()
+        # allPlayersStatus()
     
     ################################ DAY TIME ################################
     
     print(dayTimeStartText())
-    print(killedLastNight)
+    printNightVictims()
+    updateAlivePlayersTuple()
     printAliveCharacters()
     inp = input('Who do you ALL want to hang/kill? id = ')
     id = validateIntInput(inp)
-    hangedChar = seenChar = characters[id]
+    hangedChar = seenChar = getCharacterById(id)
     hangedChar.killed()
     resetAfterDay()
-    allPlayersStatus()
+    alivePlayersStatus()
     days += 1
