@@ -13,6 +13,7 @@ class Character:
     disabled = False
     alive = True
     protected = False
+    inCupidLove = False
 
     def skill(self):
         print('This person has no skills')
@@ -23,12 +24,13 @@ class Character:
     
     def killed(self):
         self.alive = False
-        killedLastNight.append(self.player)
-        # print(killedLastNight)
+        if (not self.player in killedLastNight):
+            killedLastNight.append(self.player)
 
     def revived(self):
-        self.alive = True
-        killedLastNight.remove(self.player)
+        if (not self.alive):
+            self.alive = True
+            killedLastNight.remove(self.player)
 
     def guardProtected(self):
         self.protected = True
@@ -48,9 +50,14 @@ class Character:
         if self.protected:
             return 'PROTECTED'
         return ''
+    
+    def inCupidLoveStatus(self):
+        if self.inCupidLove:
+            return 'LOVE'
+        return ''
 
     def info(self):
-        return (str(self.id) + ' ' + self.name + ' ' + self.player + ' ' + self.team + ' ' + self.aliveStatus() + ' ' + self.protectedStatus())
+        return (str(self.id) + ' ' + self.name + ' ' + self.player + ' ' + self.team + ' ' + self.aliveStatus() + ' ' + self.inCupidLoveStatus() + ' ' + self.protectedStatus())
 
 class Villager(Character):
     def __init__(self, player = None, id = 0):
@@ -59,6 +66,13 @@ class Villager(Character):
         self.team = TEAM_HUMAN
         self.power = 1
         self.player = player
+
+class Villagers(Character):
+    def __init__(self, player = None, id = 0):
+        self.id = id
+        self.name = MISC_VILLAGERS
+        self.team = TEAM_WOLF
+        self.player = MISC_VILLAGERS
 
 class Werewolf(Character):
     def __init__(self, player = None, id = 0):
@@ -131,8 +145,10 @@ class Witch(Character):
             used = int(input('(press 1 for YES, press 0 for NO): '))
             if (used == 1):
                 self.skill_revive(char)
+                return True
         else:
             print('NO REVIVAL POWER - CANNOT SEE THE VICTIM')
+        return False
 
     def skill_kill(self, char): #skill kill
         if (self.kill > 0):
@@ -149,3 +165,19 @@ class Witch(Character):
                 char.revived()
                 print(char.player, 'has been revived by the Witch')
         time.sleep(1)
+    
+class Cupid(Character):
+    couple = list()
+
+    def __init__(self, player = None, id = 0):
+        self.id = id
+        self.name = CHAR_CUPID
+        self.team = TEAM_HUMAN
+        self.power = 1
+        self.player = player
+    
+    def skill(self, char1, char2):
+        self.couple.append(char1)
+        self.couple.append(char2)
+        char1.inCupidLove = True
+        char2.inCupidLove = True

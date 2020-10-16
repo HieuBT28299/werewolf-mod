@@ -35,6 +35,8 @@ for i in range(playersNum):
         char = Guard(player=players[i], id=i+1)
     elif (roles[i] == CHAR_WITCH):
         char = Witch(player=players[i], id=i+1)
+    elif (roles[i] == CHAR_CUPID):
+        char = Cupid(player=players[i], id=i+1)
     characters.append(char)
 
 #list of alive players
@@ -63,7 +65,7 @@ def nightLogging(days, fname="gamelog.txt"):
 
 def eventLogging(action, subject, obj, fname="gamelog.txt"):
     f = open(fname, "a")
-    f.write("{} {} {} -> {}".format(subject.name, subject.player, action, obj.player))
+    f.write("{} ({}) {} -> {} ({})".format(subject.name, subject.player, action, obj.name, obj.player))
     f.write('\n')
     f.close()
 
@@ -135,6 +137,7 @@ def printNightVictims():
     s = '======='
     print(s, n, 'PEOPLE DEAD:', killedLastNight, s)
     time.sleep(1)
+    killedLastNight.clear()
 
 # def playerKilled(id):
 #     charToKill = getCharacterById(id)
@@ -167,6 +170,12 @@ def isWolfPackDisabled():
             return True
     return False
 
+def checkCoupleKill():
+    for lover in cupid.couple: #check if someone killed last night was in Cupid couple
+        if lover.player in killedLastNight:
+            cupid.couple[0].killed()
+            cupid.couple[1].killed()
+            break
 
 #start the game
 days = 1
@@ -183,7 +192,19 @@ while days <= 2:
     if (days == 1):
         #TO-DO
         print('Cupid and others //')
-        # playerKilled(5)
+        if exist(CHAR_CUPID):
+            cupid = getCharacterByRole(CHAR_CUPID)
+            print(characterTurn(CHAR_CUPID))
+            printAliveCharacters()
+            inp = input('Choose the first lover: id = ')
+            id1 = validateIntInput(inp)
+            inp = input('Choose the second lover: id = ')
+            id2 = validateIntInput(inp)
+            if isIdValid(id1) and isIdValid(id2) and (id1 != id2):
+                lover1 = getCharacterById(id1)
+                lover2 = getCharacterById(id2)
+                cupid.skill(lover1, lover2)
+
     
     if exist(CHAR_GUARD):
         guard = getCharacterByRole(CHAR_GUARD)
@@ -210,7 +231,9 @@ while days <= 2:
     if exist(CHAR_WITCH):
         witch = getCharacterByRole(CHAR_WITCH)
         print(characterTurn(CHAR_WITCH))
-        witch.skill(killedByWolfPack)
+        didRevive = witch.skill(killedByWolfPack)
+        if didRevive:
+            eventLogging(ACTION_REVIVE, witch, killedByWolfPack)
         if witch.kill > 0:
             printAliveCharacters()
             inp = input('Do you want to kill anyone? (press 0 to skip) id = ')
@@ -218,6 +241,7 @@ while days <= 2:
             if isIdValid(id):
                 killedByWitch = getCharacterById(id)
                 witch.skill_kill(killedByWitch)
+                eventLogging(ACTION_KILL, witch, killedByWitch)
         else:
             print('NO KILL POWER LEFT')
     
@@ -230,10 +254,13 @@ while days <= 2:
         if isIdValid(id):
             seenChar = getCharacterById(id)
             seer.skill(seenChar)
-        # allPlayersStatus()
+            eventLogging(ACTION_SEE, seer, seenChar)
+        
     
     ################################ DAY TIME ################################
-    
+
+    checkCoupleKill()
+
     print(dayTimeStartText())
     printNightVictims()
     updateAlivePlayersTuple()
@@ -241,14 +268,18 @@ while days <= 2:
     inp = input('Who do you ALL want to hang/kill? (press 0 to skip) id = ')
     id = validateIntInput(inp)
     if isIdValid(id):
+        villagers = Villagers()
         hangedChar = getCharacterById(id)
         hangedChar.killed()
+        eventLogging(ACTION_KILL, villagers, hangedChar)
+    
+    checkCoupleKill()
+    printNightVictims()
     resetAfterDay()
     alivePlayersStatus()
     days += 1
 
 #TO-DO NEXT:
-#DEV CHARACTER CUPID
 #DEV CHARACTER HUNTER
 #LOG GAME INFO AFTER EVERY DAY TO ROLLBACK
 #LOG GAME EVENTS TO EXPLAIN AT GAME END
